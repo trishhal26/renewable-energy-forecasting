@@ -1,0 +1,10 @@
+pandas
+numpy
+scikit-learn
+xgboost
+matplotlib
+seaborn
+shap
+jupyter
+# torch or tensorflow — add if LSTM component is implemented
+# streamlit — add if demo app is built
