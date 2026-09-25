@@ -2,35 +2,23 @@
 
 Forecasting power output for **solar** and **wind** energy sources using machine learning — built as a single, comparative project rather than two disconnected notebooks.
 
-> **Status: 🚧 In Progress** — Repository structure and project plan are set up. Full implementation begins after 20 Sept 2026 (post-exams). Watch this repo for updates!
-
----
-
 ## 📌 Project Overview
 
-Most renewable-energy forecasting projects online tackle solar *or* wind in isolation. This project instead asks: **how differently should we approach forecasting for two fundamentally different energy sources?**
+This project predicts **solar and wind power output** from weather and operating conditions using classical ML — a "pure machine learning" project (regression, feature engineering, model evaluation) without any deep learning or LLM components.
 
-- **Solar power output** tends to follow strong daily/seasonal cyclic patterns (sunrise–sunset, season) — comparatively easier to model.
-- **Wind power output** is noisier and non-linear (tied to a turbine's power curve, sudden gusts, direction changes) — a harder forecasting problem.
-
-By building both pipelines with a **shared methodology** (same preprocessing philosophy, same evaluation approach) but source-specific modeling choices, the project aims to show:
-1. Solid end-to-end ML pipeline skills (cleaning → feature engineering → modeling → evaluation).
-2. The ability to reason about *why* one domain is harder to predict than another — not just fit a model and report accuracy.
-
----
+- **Core objective:** Given current weather/sensor readings (irradiation, temperature, wind speed, etc.), predict power output — for both a solar plant and a wind turbine — and compare which is easier to predict and why.
+- **Stretch goal:** Extend the solar and/or wind model into a genuine *forecast* (predicting tomorrow's output from today's data) using lag-based time-series features, rather than same-timestamp prediction.
 
 ## 🎯 Goals
 
-- [ ] Build a solar power output forecasting model (regression)
-- [ ] Build a wind power output forecasting model (regression)
-- [ ] Shared utility functions for preprocessing/plotting across both
+- [ ] Solar power output prediction (regression)
+- [ ] Wind power output prediction (regression)
+- [ ] Shared utility functions for preprocessing/plotting
 - [ ] Baseline models (Linear Regression) → stronger models (Random Forest / XGBoost)
-- [ ] Optional: LSTM/time-series model for one source to show sequence modeling
 - [ ] Comparative analysis: predictability of solar vs. wind, feature importance, error analysis
 - [ ] Clean visualizations: predicted vs. actual, feature importance, residual plots
-- [ ] (Stretch) Simple Streamlit demo for interactive forecasting
-
----
+- [ ] **(Stretch)** Lag-based forecasting: predict next-day output from historical patterns
+- [ ] **(Stretch)** Simple Streamlit demo
 
 ## 🗂️ Repository Structure
 
@@ -51,17 +39,14 @@ renewable-energy-forecasting/
 
 ---
 
-## 📊 Planned Datasets
+## 📊 Datasets Used
 
 | Source | Dataset | Link |
 |---|---|---|
+| Solar | Solar Power Generation Data (2 plants, generation + weather sensor readings) | Kaggle |
 | Wind | Wind Turbine SCADA Dataset | Kaggle |
-| Wind | Wind Toolkit | NREL |
-| Wind/Solar | Grid generation data | ENTSO-E |
-| Solar | National Solar Radiation Database (NSRDB) | NREL |
 
-*(Final dataset selection to be confirmed during implementation phase.)*
-
+*Note: the solar dataset is from plants in India; the wind dataset is from a turbine in Turkey. They're used independently for a same-timestamp output-prediction task, not combined into one location-specific model.*
 ---
 
 ## 🛠️ Planned Tech Stack
@@ -80,10 +65,11 @@ renewable-energy-forecasting/
 | Phase | Status |
 |---|---|
 | Project scoping & repo setup | ✅ Done |
-| Data collection & EDA | ⏳ Starting after 20 Sept 2026 |
-| Solar forecasting pipeline | ⏳ Planned |
-| Wind forecasting pipeline | ⏳ Planned |
+| Data collection & EDA | 🔄 In progress |
+| Solar power prediction pipeline | ⏳ Planned |
+| Wind power prediction pipeline | ⏳ Planned |
 | Comparative analysis & writeup | ⏳ Planned |
+| (Stretch) Lag-based forecasting | ⏳ Planned |
 | (Stretch) Streamlit demo | ⏳ Planned |
 
 ---
