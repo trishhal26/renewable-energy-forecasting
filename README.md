@@ -7,7 +7,7 @@ A machine learning project on real solar and wind data, built around two questio
 
 Each dataset is used for what it is best suited to. The wind dataset has a full year of history, which makes it right for time-series forecasting and deep learning. The solar dataset has ~22 inverters working under the same weather, which makes it right for spotting underperforming equipment.
 
-> **Status: 🔄 In Progress** — Data collection and exploratory data analysis complete. Feature engineering and modeling underway.
+> **Status: 🔄 In Progress** — Wind forecasting complete (naive baseline, XGBoost, LSTM). Solar health check underway.
 
 ---
 
@@ -64,7 +64,22 @@ Finding inverters that produce less than they should, and estimating what that s
 - **No solar forecasting:** the solar dataset covers only ~34 days. That's too short to forecast reliably or to train an LSTM without overfitting, so the data is used where it's strongest: comparing inverters.
 
 ---
+## 🏁 Wind Forecasting Results
 
+1-hour-ahead forecasts on the test period (Nov–Dec 2018), with all models scored on the same rows:
+
+| Model | MAE (kW) | RMSE (kW) | Skill vs. naive |
+|---|---|---|---|
+| Naive (persistence) | 285.9 | 494.1 | 0.000 |
+| **XGBoost (predicts change) ✅ selected** | 311.9 | **477.6** | **0.033** |
+| LSTM (predicts change) | 314.7 | 479.5 | 0.030 |
+
+- **Reframing the target mattered more than the model:** predicting the *change* in power instead of its level more than doubled XGBoost's skill (0.013 → 0.034 in notebook 04).
+- **XGBoost and LSTM are essentially tied**, both reducing RMSE by about 3% compared with persistence. XGBoost is selected because it is marginally better, faster, and more interpretable.
+- **A bigger model didn't help:** the LSTM overfit after one epoch, and a smaller variant didn't generalise better.
+- **Conclusion:** from past observations alone, persistence is close to the ceiling one hour ahead. Larger gains would require weather-forecast inputs.
+
+---
 ## 📈 Key Findings So Far (EDA)
 
 - **Wind:** clean data with no missing values. Output is noisy with no daily pattern. Wind speed vs. power follows the expected S-shaped curve: near zero at low speeds, a steep rise, then a flat plateau at rated capacity. A few small negative power values appear, consistent with the turbine drawing grid power while idling; these are handled during preprocessing.
@@ -131,16 +146,15 @@ renewable-energy-forecasting/
 |---|---|
 | Project scoping & repo setup | ✅ Done |
 | Data collection & EDA (wind + solar) | ✅ Done |
-| Wind: feature engineering (lags, rolling, time features) | 🔄 In progress |
-| Wind: naive baseline + XGBoost forecasting | ⏳ Planned |
-| Wind: LSTM forecasting + comparison with XGBoost | ⏳ Planned |
-| Solar: expected-output model + inverter ranking | ⏳ Planned |
+| Wind: feature engineering (lags, rolling, time features) | ✅ Done |
+| Wind: naive baseline + XGBoost forecasting | ✅ Done |
+| Wind: LSTM forecasting + comparison with XGBoost | ✅ Done |
+| Solar: expected-output model + inverter ranking | 🔄 In progress |
 | Solar: lost energy & cost estimation | ⏳ Planned |
 | Streamlit dashboard (Wind Forecast tab + Solar Health tab) | ⏳ Planned |
 | **(Stretch)** Wind: day-ahead forecasting | ⏳ Planned |
 | **(Stretch)** Wind: energy loss vs. theoretical power curve | ⏳ Planned |
 | **(Stretch)** Prediction intervals via quantile regression | ⏳ Planned |
-
 ---
 
 ## 👤 About
