@@ -1,13 +1,27 @@
 # ⚡ Renewable Energy Forecasting & Asset Health Check
 
+**[🔴 Live dashboard] (https://trisha-renewable-energy.streamlit.app/)** · Python · XGBoost · PyTorch · Streamlit
+
 A machine learning project on real solar and wind data, built around two questions an energy operator asks every day:
 
 1. **Wind — Forecasting:** *How much power will the turbine produce in the next hour?*
 2. **Solar — Health Check:** *Are all the inverters producing what they should, and if not, how much energy are we losing?*
 
-Each dataset is used for what it is best suited to. The wind dataset has a full year of history, which makes it right for time-series forecasting and deep learning. The solar dataset has ~22 inverters working under the same weather, which makes it right for spotting underperforming equipment.
+Each dataset is used for what it suits best: the wind data has a full year of history (enough for forecasting and deep learning), and the solar data has ~22 inverters per plant sharing the same weather (good for spotting underperforming equipment).
 
-> **Status: 🔄 In Progress** — Wind forecasting and solar health check complete. Streamlit dashboard next.
+---
+
+## 🖥️ Live Dashboard
+
+![Dashboard](images/dashboard.png)
+
+**[Open the dashboard](https://trisha-renewable-energy.streamlit.app/)**. It has three tabs:
+
+| Tab | What it does |
+|---|---|
+| 💨 **Wind Forecast** | Compare naive, XGBoost, and LSTM forecasts against actual output for any window of the test period |
+| 🔴 **Live Replay** | Simulated real-time forecasting: pick a moment, and the app builds features from **only the readings up to that moment** and runs the trained XGBoost model on demand. Step through time and reveal what actually happened |
+| ☀️ **Solar Health Check** | Inverter performance ranking, estimated losses with an adjustable tariff, and daily actual vs. expected output for any inverter |
 
 ---
 
@@ -15,58 +29,24 @@ Each dataset is used for what it is best suited to. The wind dataset has a full 
 
 | | 💨 Wind | ☀️ Solar |
 |---|---|---|
-| **Question** | How much power will we produce next? | Which inverters are underperforming, and what does it cost? |
+| **Question** | How much power will we produce in the next hour? | Which inverters are underperforming, and what does it cost? |
 | **Task** | Time-series forecasting | Underperformance (anomaly) detection |
-| **Models** | Naive baseline → XGBoost → LSTM | Expected-output regression → residual analysis |
-| **Output** | Next-hour power forecast + model comparison | Inverter ranking + lost energy (kWh) + estimated cost (₹) |
-| **Why this dataset** | Full year of 10-min data (~50K rows): enough history for forecasting and for training an LSTM | ~22 inverters under identical weather: weak inverters stand out against their neighbours |
+| **Models** | Naive baseline → XGBoost → LSTM (PyTorch) | Expected-output regression (XGBoost) → residual analysis |
+| **Result** | XGBoost selected: 3.3% lower RMSE than persistence | 19 of 44 inverters flagged; ~₹23.7 lakh estimated loss in 34 days |
 
 ---
 
 ## 💨 Part 1 — Wind Power Forecasting
 
-### What we are doing
-Forecasting the turbine's power output for the **next hour**, using only information available at the time of prediction.
+**Goal:** forecast turbine output **1 hour ahead** using only information available at prediction time.
 
-- **Features:** past power output (lags), past wind speed, wind direction, rolling averages, and time features (hour, day, month)
-- **Models, from simplest to most complex:**
-  1. **Naive baseline** — "next hour will look like the last hour." Every model must beat this to be useful.
-  2. **XGBoost** — a tree-based model trained on lag and time features.
-  3. **LSTM (PyTorch)** — a deep learning model that learns directly from sequences of past observations.
-- **Evaluation:** time-based train/test split (train on earlier months, test on later months), compared using MAE and RMSE.
+**Approach**
+- **Features:** past power and wind speed (lags up to 24 h), rolling averages and volatility, trend features, and cyclical encodings of wind direction, hour, and month
+- **Data handling:** 2,030 missing timestamps (~4% of the year). Gaps up to 1 hour were interpolated; longer gaps were left unfilled rather than invented. 57 small negative power readings (turbine drawing grid power while idle) were clipped to 0
+- **Time-based split:** train Jan–Aug, validate Sep–Oct, test Nov–Dec, so no future data leaks into training
+- **Model selection on the validation set only**; the test set was used once, to report results
 
-### Why
-- **Naive baseline first:** a forecast only has value if it beats the simplest possible guess.
-- **XGBoost vs. LSTM:** tests whether a deep learning model's extra complexity actually pays off over a strong tree-based model on this data. Whichever wins, the comparison is the result.
-- **Time-based split:** this is time-series data. A random split would let the model see the future during training and overstate its accuracy.
-
-### What we are not doing, and why
-- **No weather forecast inputs:** real forecasting systems use predicted wind speed, but historical forecasts for this turbine's location and dates aren't available. The model forecasts from past observations only.
-- **No long-range forecasting:** accuracy from past observations alone drops quickly beyond short horizons, so the focus stays on the next hour.
-
----
-
-## ☀️ Part 2 — Solar Asset Health Check
-
-### What we are doing
-Finding inverters that produce less than they should, and estimating what that shortfall costs.
-
-1. **Learn expected output:** a regression model predicts how much AC power an inverter *should* produce from irradiation, ambient temperature, module temperature, and time of day.
-2. **Compare expected vs. actual:** the gap between the two (the residual) is the signal. A small gap means normal operation; a large, persistent shortfall points to a possible fault, dirty panels, or downtime.
-3. **Rank and quantify:** rank inverters by how consistently they underproduce compared with others under identical weather, and convert the shortfall into **lost energy (kWh)** and **estimated cost (₹)** using a stated tariff assumption.
-
-### Why
-- **Same weather, many inverters:** all inverters in a plant share one weather sensor, so an inverter that keeps lagging behind its neighbours is a strong, fair signal of a problem.
-- **Residual-based detection:** simple, explainable, and widely used in industrial monitoring. Every flag traces back to "the model expected X, the inverter produced Y".
-- **Ending at a cost figure:** turns a model output into a maintenance decision: *which inverter to check first*.
-
-### What we are not doing, and why
-- **No solar forecasting:** the solar dataset covers only ~34 days. That's too short to forecast reliably or to train an LSTM without overfitting, so the data is used where it's strongest: comparing inverters.
-
----
-## 🏁 Wind Forecasting Results
-
-1-hour-ahead forecasts on the test period (Nov–Dec 2018), with all models scored on the same rows:
+**Results** (test period Nov–Dec 2018, all models scored on the same 7,943 rows)
 
 | Model | MAE (kW) | RMSE (kW) | Skill vs. naive |
 |---|---|---|---|
@@ -74,40 +54,61 @@ Finding inverters that produce less than they should, and estimating what that s
 | **XGBoost (predicts change) ✅ selected** | 311.9 | **477.6** | **0.033** |
 | LSTM (predicts change) | 314.7 | 479.5 | 0.030 |
 
-- **Reframing the target mattered more than the model:** predicting the *change* in power instead of its level more than doubled XGBoost's skill (0.013 → 0.034 in notebook 04).
-- **XGBoost and LSTM are essentially tied**, both reducing RMSE by about 3% compared with persistence. XGBoost is selected because it is marginally better, faster, and more interpretable.
-- **A bigger model didn't help:** the LSTM overfit after one epoch, and a smaller variant didn't generalise better.
-- **Conclusion:** from past observations alone, persistence is close to the ceiling one hour ahead. Larger gains would require weather-forecast inputs.
+**Key findings**
+- **Persistence is a strong baseline** one hour ahead: wind rarely changes drastically within an hour.
+- **Reframing the target mattered more than the model.** The first XGBoost (predicting power directly) barely beat persistence. Predicting the *change* in power instead more than doubled its skill (0.013 → 0.034).
+- **XGBoost and LSTM are essentially tied.** XGBoost is selected: marginally better, trains in seconds, easier to interpret.
+- **A bigger model didn't help.** The LSTM overfit after one epoch, and a smaller, regularised variant did worse on validation. The limit is the information in the data, not model capacity: larger gains would need weather-forecast inputs.
 
 ---
-## ☀️ Solar Health Check Results
+
+## ☀️ Part 2 — Solar Asset Health Check
+
+**Goal:** find inverters that produce less than they should, and estimate the energy and money lost.
+
+**Approach**
+1. A model per plant learns what a **typical** inverter produces from irradiation, temperatures, and time of day
+2. Each inverter's actual output is compared with that expectation: **performance ratio = actual ÷ expected energy**; below 0.95 is flagged
+3. Shortfalls are converted into lost kWh and ₹ (tariff assumption: ₹3/kWh)
+
+**Two design decisions:**
+- **The inverter ID is deliberately not a feature.** Otherwise the model would learn that a weak inverter is "supposed" to be weak, and the problem would vanish from the residuals.
+- **The model predicts the median inverter** (absolute-error objective), so faulty inverters don't drag down "expected" output for everyone.
 
 ![Inverter performance ratio by plant](images/solar_performance_ratio.png)
+
+**Results**
 
 | Plant | Inverters flagged | Daylight readings offline | Model R² (vs. peer median) |
 |---|---|---|---|
 | Plant 1 | 2 of 22 | 0.2% | 0.99 |
 | Plant 2 | **17 of 22** | **11.9%** | 0.79 |
 
-- **Plant 1 is healthy:** only 2 inverters fall below the 0.95 performance-ratio threshold (≈ 0.91–0.92).
+**Key findings**
+- **Plant 1 is healthy:** only 2 inverters fall below the threshold (≈ 0.91–0.92).
 - **Plant 2 has a plant-wide problem:** most inverters show repeated zero-output periods in good sunlight (the worst: 50–80 hours in 34 days), roughly 60× more often than Plant 1. That points to a shared, plant-level cause, so the recommendation is to investigate the plant as a whole first.
-- **Estimated impact:** ~790,000 kWh lost over 34 days, about **₹23.7 lakh** (≈ **₹2.5 crore/year** if unaddressed), assuming a ₹3/kWh tariff. Figures are indicative.
-- **Validated two ways:** the model-based ranking matches a model-free peer comparison (Spearman ρ = 0.971). A diagnostic showed Plant 2's low R² against individual inverters (0.17) was driven by outages, not model error (0.79 against the peer median).
-
----
-## 📈 Key Findings So Far (EDA)
-
-- **Wind:** clean data with no missing values. Output is noisy with no daily pattern. Wind speed vs. power follows the expected S-shaped curve: near zero at low speeds, a steep rise, then a flat plateau at rated capacity. A few small negative power values appear, consistent with the turbine drawing grid power while idling; these are handled during preprocessing.
-- **Solar:** clean data with no missing values. Output follows a clear daily cycle: zero at night, peaking around midday.
+- **Estimated impact:** ~790,000 kWh lost over 34 days, about **₹23.7 lakh** (≈ **₹2.5 crore/year** if unaddressed). Figures are indicative.
+- **Validated two ways:** the model-based ranking matches a model-free comparison with each plant's median inverter (**Spearman ρ = 0.971**). Plant 2's low R² against individual inverters (0.17) was diagnosed as outage-driven: against the peer median it rises to 0.79.
 
 ---
 
-## ⚠️ Known Limitations
+## ✅ Engineering & Validation
 
-- **Forecasts use past observations only** (no weather forecasts), so they set a realistic baseline rather than production-grade accuracy.
-- **Short solar history (~34 days)** limits the health check to that period and rules out seasonal analysis.
-- **Different locations:** the wind (Turkey) and solar (India) datasets are analysed independently, not combined.
-- **Cost estimates** depend on an assumed electricity tariff and are indicative, not exact.
+- **No data leakage:** time-based splits throughout; features use only past and present readings; scalers fitted on training data only
+- **Gap-aware sequences:** the LSTM only uses 6-hour windows with no missing timestamps, so sequences never silently join data across gaps
+- **Fair comparison:** all wind models are evaluated on identical test rows
+- **Deployment parity check:** the dashboard's feature pipeline (`dashboard/wind_pipeline.py`) was verified to reproduce the training features for all 8,085 test rows (max difference 2.5 × 10⁻⁸) and the saved forecasts exactly (max difference 0.000000 kW). The deployed model gets exactly the inputs it was trained on
+
+---
+
+## ⚠️ Limitations
+
+- **No weather-forecast inputs:** wind forecasts use past observations only. Historical weather forecasts for this turbine's location and dates aren't available
+- **Short solar history (34 days):** too short for solar forecasting or seasonal analysis, which is why the solar data is used for the health check instead
+- **Zero-output periods:** from data alone, a real outage can't be distinguished from a logger recording 0
+- **Cost estimates** depend on the tariff assumption; the annualised figure assumes the same weather and faults all year
+- **Different locations:** the wind (Turkey) and solar (India) datasets are analysed independently
+- **Live Replay** replays recorded 2018 data; with a live data feed, the same pipeline would run in real time
 
 ---
 
@@ -115,10 +116,8 @@ Finding inverters that produce less than they should, and estimating what that s
 
 | Part | Dataset | Details |
 |---|---|---|
-| Wind | [Wind Turbine SCADA Dataset](https://www.kaggle.com/datasets/berkerisen/wind-turbine-scada-dataset) (Kaggle) | 1 turbine in Turkey, full year 2018, 10-min intervals. Active power, wind speed, wind direction, theoretical power curve |
-| Solar | [Solar Power Generation Data](https://www.kaggle.com/datasets/anikannal/solar-power-generation-data) (Kaggle) | 2 plants in India, ~34 days, 15-min intervals. Inverter-level generation + plant-level weather sensor data |
-
-*Raw data is not committed to this repo (see `.gitignore`). Download it from the links above into `data/raw/wind/` and `data/raw/solar/`.*
+| Wind | [Wind Turbine SCADA Dataset](https://www.kaggle.com/datasets/berkerisen/wind-turbine-scada-dataset) (Kaggle) | 1 turbine in Turkey, full year 2018, 10-min intervals |
+| Solar | [Solar Power Generation Data](https://www.kaggle.com/datasets/anikannal/solar-power-generation-data) (Kaggle) | 2 plants in India, 15 May–17 June 2020, 15-min intervals, ~22 inverters per plant |
 
 ---
 
@@ -126,54 +125,63 @@ Finding inverters that produce less than they should, and estimating what that s
 
 ```
 renewable-energy-forecasting/
+├── .streamlit/config.toml           # Dashboard theme
+├── dashboard/
+│   ├── app.py                       # Streamlit dashboard (3 tabs)
+│   ├── wind_pipeline.py             # Raw readings → model features (used by Live Replay)
+│   └── requirements.txt             # Dashboard-only dependencies (used for deployment)
 ├── data/
-│   ├── raw/
-│   │   ├── solar/        # Plant 1 & 2 generation + weather CSVs (not committed)
-│   │   └── wind/         # Turbine SCADA CSV (not committed)
-│   └── processed/        # Cleaned / feature-engineered data
+│   ├── raw/                         # Kaggle CSVs (not committed — see Datasets)
+│   └── processed/                   # Engineered data; small files used by the dashboard are committed
+├── images/                          # Figures used in this README
+├── models/                          # Trained models; XGBoost files used by the dashboard are committed
 ├── notebooks/
 │   ├── 01_solar_eda.ipynb
-│   └── 02_wind_eda.ipynb
-├── solar/                # Solar health-check pipeline
-├── wind/                 # Wind forecasting pipeline
-├── utils/                # Shared preprocessing, evaluation, plotting
-├── models/               # Saved trained models
-├── images/               # Plots used in this README
-├── requirements.txt
+│   ├── 02_wind_eda.ipynb
+│   ├── 03_wind_feature_engineering.ipynb
+│   ├── 04_wind_forecasting_xgboost.ipynb
+│   ├── 05_wind_forecasting_lstm.ipynb
+│   ├── 06_solar_health_check.ipynb
+│   └── 07_wind_replay_pipeline.ipynb
+├── requirements.txt                 # Full project dependencies
 └── README.md
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## ▶️ Run Locally
 
-- **Python** · pandas · NumPy · scikit-learn · XGBoost
-- **Deep learning:** PyTorch (LSTM)
-- **Visualization:** matplotlib, seaborn
-- **Explainability:** SHAP
-- **Deployment:** Streamlit
+```bash
+git clone https://github.com/trishhal26/renewable-energy-forecasting.git
+cd renewable-energy-forecasting
+pip install -r requirements.txt
+
+# The dashboard runs straight away (the files it needs are committed):
+python -m streamlit run dashboard/app.py
+```
+
+To reproduce the analysis, download both datasets from Kaggle into `data/raw/solar/` and `data/raw/wind/`, then run the notebooks in order (01 → 07).
 
 ---
 
-## 🗓️ Roadmap
+## 🛠️ Tech Stack
 
-| Phase | Status |
-|---|---|
-| Project scoping & repo setup | ✅ Done |
-| Data collection & EDA (wind + solar) | ✅ Done |
-| Wind: feature engineering (lags, rolling, time features) | ✅ Done |
-| Wind: naive baseline + XGBoost forecasting | ✅ Done |
-| Wind: LSTM forecasting + comparison with XGBoost | ✅ Done |
-| Solar: expected-output model + inverter ranking | ✅ Done |
-| Solar: lost energy & cost estimation | ✅ Done |
-| Streamlit dashboard (Wind Forecast tab + Solar Health tab) | 🔄 In progress |
-| **(Stretch)** Wind: day-ahead forecasting | ⏳ Planned |
-| **(Stretch)** Wind: energy loss vs. theoretical power curve | ⏳ Planned |
-| **(Stretch)** Prediction intervals via quantile regression | ⏳ Planned |
+- **Data & ML:** Python, pandas, NumPy, scikit-learn, XGBoost
+- **Deep learning:** PyTorch (LSTM)
+- **Visualisation:** matplotlib, seaborn, Plotly
+- **Deployment:** Streamlit, Streamlit Community Cloud
+
+---
+
+## 🔭 Future Work
+
+- **Prediction intervals** (quantile regression), e.g. "expect 1,800–2,400 kW in the next hour"
+- **Wind energy loss vs. the manufacturer's power curve**, extending the health check to the turbine
+- **Weather-forecast inputs**, using a turbine dataset with a known location and historical forecasts
+- **Day-ahead forecasting**
+
 ---
 
 ## 👤 About
 
 Built by **Trisha Haldar** as a portfolio project during an AI/ML certificate program (IIT Patna × Masai School).
-
-*This README is updated as the project progresses.*
