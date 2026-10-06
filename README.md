@@ -7,7 +7,7 @@ A machine learning project on real solar and wind data, built around two questio
 
 Each dataset is used for what it is best suited to. The wind dataset has a full year of history, which makes it right for time-series forecasting and deep learning. The solar dataset has ~22 inverters working under the same weather, which makes it right for spotting underperforming equipment.
 
-> **Status: 🔄 In Progress** — Wind forecasting complete (naive baseline, XGBoost, LSTM). Solar health check underway.
+> **Status: 🔄 In Progress** — Wind forecasting and solar health check complete. Streamlit dashboard next.
 
 ---
 
@@ -80,6 +80,21 @@ Finding inverters that produce less than they should, and estimating what that s
 - **Conclusion:** from past observations alone, persistence is close to the ceiling one hour ahead. Larger gains would require weather-forecast inputs.
 
 ---
+## ☀️ Solar Health Check Results
+
+![Inverter performance ratio by plant](images/solar_performance_ratio.png)
+
+| Plant | Inverters flagged | Daylight readings offline | Model R² (vs. peer median) |
+|---|---|---|---|
+| Plant 1 | 2 of 22 | 0.2% | 0.99 |
+| Plant 2 | **17 of 22** | **11.9%** | 0.79 |
+
+- **Plant 1 is healthy:** only 2 inverters fall below the 0.95 performance-ratio threshold (≈ 0.91–0.92).
+- **Plant 2 has a plant-wide problem:** most inverters show repeated zero-output periods in good sunlight (the worst: 50–80 hours in 34 days), roughly 60× more often than Plant 1. That points to a shared, plant-level cause, so the recommendation is to investigate the plant as a whole first.
+- **Estimated impact:** ~790,000 kWh lost over 34 days, about **₹23.7 lakh** (≈ **₹2.5 crore/year** if unaddressed), assuming a ₹3/kWh tariff. Figures are indicative.
+- **Validated two ways:** the model-based ranking matches a model-free peer comparison (Spearman ρ = 0.971). A diagnostic showed Plant 2's low R² against individual inverters (0.17) was driven by outages, not model error (0.79 against the peer median).
+
+---
 ## 📈 Key Findings So Far (EDA)
 
 - **Wind:** clean data with no missing values. Output is noisy with no daily pattern. Wind speed vs. power follows the expected S-shaped curve: near zero at low speeds, a steep rise, then a flat plateau at rated capacity. A few small negative power values appear, consistent with the turbine drawing grid power while idling; these are handled during preprocessing.
@@ -149,9 +164,9 @@ renewable-energy-forecasting/
 | Wind: feature engineering (lags, rolling, time features) | ✅ Done |
 | Wind: naive baseline + XGBoost forecasting | ✅ Done |
 | Wind: LSTM forecasting + comparison with XGBoost | ✅ Done |
-| Solar: expected-output model + inverter ranking | 🔄 In progress |
-| Solar: lost energy & cost estimation | ⏳ Planned |
-| Streamlit dashboard (Wind Forecast tab + Solar Health tab) | ⏳ Planned |
+| Solar: expected-output model + inverter ranking | ✅ Done |
+| Solar: lost energy & cost estimation | ✅ Done |
+| Streamlit dashboard (Wind Forecast tab + Solar Health tab) | 🔄 In progress |
 | **(Stretch)** Wind: day-ahead forecasting | ⏳ Planned |
 | **(Stretch)** Wind: energy loss vs. theoretical power curve | ⏳ Planned |
 | **(Stretch)** Prediction intervals via quantile regression | ⏳ Planned |
