@@ -3,11 +3,16 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
-
+!data/processed/wind_test_predictions_all.csv
+!data/processed/solar_scorecard.csv
+!data/processed/solar_daily.csv
+!data/processed/wind_replay_readings.csv
 # Models
 models/*
 !models/.gitkeep
-
+!models/wind_xgboost_delta.json
+!models/wind_xgboost_features.json
+!models/wind_xgboost_meta.json
 # Python
 __pycache__/
 *.pyc
