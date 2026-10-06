@@ -257,7 +257,9 @@ with replay_tab:
     # --- Controls ---
     c1, c2, c3, c4, c5 = st.columns([1.3, 1, 0.8, 0.8, 0.8], vertical_alignment="bottom")
     c1.date_input("Date", key="replay_date", min_value=first_t.date(), max_value=last_t.date())
-    c2.time_input("Time", key="replay_clock", step=600)
+        # Dropdown of every 10-minute time of day (00:00, 00:10, ... 23:50): behaves the same in every Streamlit version
+    times_of_day = [clock_time(h, m) for h in range(24) for m in range(0, 60, 10)]
+    c2.selectbox("Time", times_of_day, key="replay_clock", format_func=lambda t: t.strftime("%H:%M"))
     c3.button("◀ 10 min", on_click=move, args=(-10,))
     c4.button("10 min ▶", on_click=move, args=(10,))
     c5.button("1 hour ⏩", on_click=move, args=(60,))
